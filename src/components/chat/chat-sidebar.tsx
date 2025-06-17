@@ -11,9 +11,9 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
 import { UserButton } from './user-buton'
-import { EllipsisIcon, PlusIcon } from 'lucide-react'
+import { PlusIcon } from 'lucide-react'
 import { useChatContext } from '@/providers/chat-provider'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'
+import { ChatMenuButton } from './chat-menu-button'
 
 export function ChatSidebar() {
   const { chatHook, currentChatId, setCurrentChatId } = useChatContext()
@@ -21,7 +21,6 @@ export function ChatSidebar() {
 
   const handleCreateChat = async () => {
     const newChat = await createChat()
-    console.log(newChat)
     if (newChat) {
       setCurrentChatId(newChat.id)
     }
@@ -45,31 +44,15 @@ export function ChatSidebar() {
           <SidebarGroupLabel>Chats</SidebarGroupLabel>
           <SidebarMenu>
             {chats.map((chat, index) => (
-              <SidebarMenuButton
+              <ChatMenuButton
                 key={index}
-                onClick={() => setCurrentChatId(chat.id)}
-                className={`${currentChatId === chat.id ? 'bg-accent' : ''} relative flex justify-between items-center`}
-              >
-                {chat.title}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <EllipsisIcon className="w-4 h-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => renameChat(chat.id, 'New Title')}>
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        deleteChat(chat.id)
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuButton>
+                chatId={chat.id}
+                title={chat.title}
+                isActive={currentChatId === chat.id}
+                onSelect={() => setCurrentChatId(chat.id)}
+                onRename={renameChat}
+                onDelete={deleteChat}
+              />
             ))}
           </SidebarMenu>
         </SidebarGroup>
