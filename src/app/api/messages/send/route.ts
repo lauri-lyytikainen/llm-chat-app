@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/server'
 import { NextResponse } from 'next/server'
+import OpenAI from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/index.js'
 
 export async function POST(request: Request) {
   try {
@@ -40,13 +42,43 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
+    // Fetch message history for the chat
+    const { data: history, error: historyError } = await supabase
+      .from('messages')
+      .select('role, content')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: true })
+
+    if (historyError) throw historyError
+
+    // Compose messages array for LLM
+    const messages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      ...history.map((msg: { role: string; content: string }) => ({
+        role: msg.role as 'user' | 'assistant' | 'system',
+        content: msg.content,
+      })),
+    ]
+
+    const openai = new OpenAI({
+      baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      apiKey: process.env.GEMINI_API_KEY,
+    })
+
+    const completion = await openai.chat.completions.create({
+      messages,
+      model: 'gemini-2.0-flash',
+    })
+
+    const llmResponse = completion.choices[0].message.content
+
     // Here you would typically make an API call to your LLM service
     // and then insert the assistant's response
     const { data: assistantMessage, error: assistantError } = await supabase
       .from('messages')
       .insert([
         {
-          content: 'This is a placeholder response. Replace with actual LLM response.',
+          content: llmResponse,
           role: 'assistant',
           chat_id: chatId,
         },
