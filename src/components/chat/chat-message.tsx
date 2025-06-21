@@ -1,4 +1,4 @@
-import { Message } from '@/hooks/use-message'
+import { Message } from '@/providers/chat-app-provider'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
