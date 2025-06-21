@@ -27,10 +27,10 @@ export function ChatContent() {
   }, [messages, isTyping])
 
   return (
-    <div className="flex flex-col w-full max-w-[1024px] mx-auto h-[100svh]">
-      <div className="flex flex-col w-full h-[calc(100svh-4rem)] p-2 gap-2">
-        <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-4">
+    <div className="flex flex-col w-full sm:max-w-[min(1024px,calc(100vw-16rem))] mx-auto h-screen">
+      <div className="flex flex-col w-full h-[calc(100svh-4rem)] gap-2 ">
+        <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto relative">
+          <div className="flex flex-col gap-4 w-full">
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}
@@ -46,7 +46,7 @@ export function ChatContent() {
             )}
           </div>
         </div>
-        <form onSubmit={handleSendMessage} className="flex flex-row w-full relative flex-shrink-0">
+        <form onSubmit={handleSendMessage} className="flex flex-row w-full relative flex-shrink-0 p-4">
           <div className="relative w-full">
             <Textarea
               placeholder="Type your message here..."
