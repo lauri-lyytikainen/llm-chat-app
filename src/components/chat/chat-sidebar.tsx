@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/sidebar'
 import { UserButton } from './user-buton'
 import { PlusIcon } from 'lucide-react'
-import { useChatContext } from '@/providers/chat-provider'
+import { useChatAppContext } from '@/providers/chat-app-provider'
 import { ChatMenuButton } from './chat-menu-button'
 
 export function ChatSidebar() {
-  const { chatHook, currentChatId, setCurrentChatId } = useChatContext()
-  const { chats, loading, createChat, deleteChat, renameChat } = chatHook
+  const { chats, loadingChats, createChat, deleteChat, renameChat, currentChatId, setCurrentChatId } =
+    useChatAppContext()
 
   const handleCreateChat = async () => {
     const newChat = await createChat()
@@ -26,13 +26,18 @@ export function ChatSidebar() {
     }
   }
 
+  // Adapter for ChatMenuButton's onRename signature
+  const handleRenameChat = async (chatId: string, newTitle: string) => {
+    await renameChat(chatId, newTitle)
+  }
+
   return (
     <Sidebar>
       <SidebarHeader>
         <h1 className="text-2xl font-bold">Chat</h1>
         <SidebarMenuButton
           onClick={handleCreateChat}
-          disabled={loading}
+          disabled={loadingChats}
           className="flex justify-between items-center bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
         >
           <PlusIcon className="w-4 h-4 mr-2" />
@@ -50,7 +55,7 @@ export function ChatSidebar() {
                 title={chat.title}
                 isActive={currentChatId === chat.id}
                 onSelect={() => setCurrentChatId(chat.id)}
-                onRename={renameChat}
+                onRename={handleRenameChat}
                 onDelete={deleteChat}
               />
             ))}
