@@ -29,7 +29,6 @@ export function ChatContent() {
   return (
     <div className="flex flex-col w-full max-w-[1024px] mx-auto h-[100svh]">
       <div className="flex flex-col w-full h-[calc(100svh-4rem)] p-2 gap-2">
-        {currentChatId}
         <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col gap-4">
             {messages.map((message) => (

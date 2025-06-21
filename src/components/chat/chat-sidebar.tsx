@@ -9,13 +9,16 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { UserButton } from './user-buton'
 import { PlusIcon } from 'lucide-react'
 import { useChatAppContext } from '@/providers/chat-app-provider'
 import { ChatMenuButton } from './chat-menu-button'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function ChatSidebar() {
+  const isMobile = useIsMobile()
   const { chats, loadingChats, createChat, deleteChat, renameChat, currentChatId, setCurrentChatId } =
     useChatAppContext()
 
@@ -34,7 +37,10 @@ export function ChatSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <h1 className="text-2xl font-bold">Chat</h1>
+        <div className="flex flex-row items-center justify-between p-2">
+          <h1 className="text-2xl font-bold">Chat</h1>
+          {isMobile && <SidebarTrigger />}
+        </div>
         <SidebarMenuButton
           onClick={handleCreateChat}
           disabled={loadingChats}
