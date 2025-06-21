@@ -16,17 +16,15 @@ import { PlusIcon } from 'lucide-react'
 import { useChatAppContext } from '@/providers/chat-app-provider'
 import { ChatMenuButton } from './chat-menu-button'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useRouter } from 'next/navigation'
 
 export function ChatSidebar() {
   const isMobile = useIsMobile()
-  const { chats, loadingChats, createChat, deleteChat, renameChat, currentChatId, setCurrentChatId } =
-    useChatAppContext()
+  const router = useRouter()
+  const { chats, loadingChats, deleteChat, renameChat, currentChatId, setCurrentChatId } = useChatAppContext()
 
   const handleCreateChat = async () => {
-    const newChat = await createChat()
-    if (newChat) {
-      setCurrentChatId(newChat.id)
-    }
+    router.push('/chat', { scroll: false })
   }
 
   // Adapter for ChatMenuButton's onRename signature

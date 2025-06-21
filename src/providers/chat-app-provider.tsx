@@ -33,6 +33,7 @@ interface ChatAppContextType {
   loadingMessages: boolean
   isTyping: boolean
   sendMessage: (content: string) => Promise<void>
+  sendMessageToChat: (chatId: string, content: string) => Promise<void>
 }
 
 const ChatAppContext = createContext<ChatAppContextType | undefined>(undefined)
@@ -206,6 +207,11 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
   // Message actions
   const sendMessage = async (content: string): Promise<void> => {
     if (!currentChatId) return
+    return sendMessageToChat(currentChatId, content)
+  }
+
+  const sendMessageToChat = async (chatId: string, content: string): Promise<void> => {
+    if (!chatId) return
     setLoadingMessages(true)
     setIsTyping(true)
     // Create a temporary user message
@@ -215,7 +221,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
       content,
       role: 'user',
       created_at: new Date().toISOString(),
-      chat_id: currentChatId,
+      chat_id: chatId,
       isPending: true,
     }
     setMessages((prevMessages) => [...prevMessages, tempMessage])
@@ -227,7 +233,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
       content: '',
       role: 'assistant',
       created_at: new Date().toISOString(),
-      chat_id: currentChatId,
+      chat_id: chatId,
       isPending: true,
     }
     setMessages((prevMessages) => [...prevMessages, assistantMessage])
@@ -236,7 +242,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch(`/api/messages/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, chatId: currentChatId }),
+        body: JSON.stringify({ content, chatId }),
       })
 
       if (response.ok && response.body) {
@@ -270,7 +276,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             content: fullContent,
             role: 'assistant',
-            chatId: currentChatId,
+            chatId,
           }),
         })
         if (!saveResponse.ok) {
@@ -279,7 +285,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
 
         // Fetch the real messages from the backend
         const fetchMessages = async () => {
-          const response = await fetch(`/api/messages?chatId=${currentChatId}`)
+          const response = await fetch(`/api/messages?chatId=${chatId}`)
           if (response.ok) {
             const data = await response.json()
             setMessages(data)
@@ -315,6 +321,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
         loadingMessages,
         isTyping,
         sendMessage,
+        sendMessageToChat,
       }}
     >
       {children}
