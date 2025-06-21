@@ -44,6 +44,37 @@ export async function POST(request: Request) {
 
     if (historyError) throw historyError
 
+    // If this is the first message, trigger async chat rename
+    if (history.length === 1) {
+      ;(async () => {
+        try {
+          const openaiForTitle = new OpenAI({
+            baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+            apiKey: process.env.GEMINI_API_KEY,
+          })
+          const titlePrompt: ChatCompletionMessageParam[] = [
+            {
+              role: 'system',
+              content:
+                "You are a helpful assistant. Generate a short, descriptive title for this chat based on the user's first message. Respond with only the title.",
+            },
+            { role: 'user', content: content },
+          ]
+          const titleCompletion = await openaiForTitle.chat.completions.create({
+            messages: titlePrompt,
+            model: 'gemini-2.0-flash',
+            max_tokens: 32,
+            stream: false,
+          })
+          const newTitle = titleCompletion.choices[0]?.message?.content?.trim()?.replace(/\n/g, '') || 'New Chat'
+          // Update the chat title in Supabase
+          await supabase.from('chats').update({ title: newTitle }).eq('id', chatId)
+        } catch (err) {
+          console.error('Failed to auto-rename chat:', err)
+        }
+      })()
+    }
+
     // Compose messages array for LLM
     const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: 'You are a helpful assistant.' },

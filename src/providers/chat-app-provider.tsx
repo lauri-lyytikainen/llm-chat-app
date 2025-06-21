@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { createClient as createSupabaseClient } from '@/lib/client'
 
 // Chat and Message interfaces
 export interface Chat {
@@ -62,6 +63,21 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
       setLoadingChats(false)
     }
     fetchChats()
+
+    // Supabase Realtime subscription for chat updates
+    const supabase = createSupabaseClient()
+    const channel = supabase
+      .channel('chats-updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chats' }, (payload) => {
+        setChats((prevChats) =>
+          prevChats.map((chat) => (chat.id === payload.new.id ? { ...chat, ...payload.new } : chat))
+        )
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   // Fetch messages for current chat
