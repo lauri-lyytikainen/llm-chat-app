@@ -20,15 +20,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Content and chat ID are required' }, { status: 400 })
     }
 
-    // Verify that the chat belongs to the user
-    const { data: chat, error: chatError } = await supabase.from('chats').select('user_id').eq('id', chatId).single()
-
-    if (chatError || chat.user_id !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Insert user message
-    const { data: message, error } = await supabase
+    const { error } = await supabase
       .from('messages')
       .insert([
         {
@@ -65,30 +58,31 @@ export async function POST(request: Request) {
       apiKey: process.env.GEMINI_API_KEY,
     })
 
-    const completion = await openai.chat.completions.create({
-      messages,
-      model: 'gemini-2.0-flash',
+    // Create a ReadableStream
+    const stream = new ReadableStream({
+      async start(controller) {
+        const completion = await openai.chat.completions.create({
+          messages,
+          model: 'gemini-2.0-flash',
+          stream: true, // Enable streaming
+        })
+
+        for await (const chunk of completion) {
+          // chunk.choices[0].delta.content contains the new token
+          const token = chunk.choices[0]?.delta?.content || ''
+          controller.enqueue(new TextEncoder().encode(token))
+        }
+        controller.close()
+      },
     })
 
-    const llmResponse = completion.choices[0].message.content
-
-    // Here you would typically make an API call to your LLM service
-    // and then insert the assistant's response
-    const { data: assistantMessage, error: assistantError } = await supabase
-      .from('messages')
-      .insert([
-        {
-          content: llmResponse,
-          role: 'assistant',
-          chat_id: chatId,
-        },
-      ])
-      .select()
-      .single()
-
-    if (assistantError) throw assistantError
-
-    return NextResponse.json({ message, assistantMessage })
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    })
   } catch (error) {
     console.error('Error sending message:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

@@ -207,5 +207,9 @@
     a {
       @apply text-accent font-bold underline-offset-4;
     }
+
+    hr {
+      @apply border-border my-4;
+    }
   }
 }

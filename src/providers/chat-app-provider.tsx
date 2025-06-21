@@ -192,7 +192,7 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
     if (!currentChatId) return
     setLoadingMessages(true)
     setIsTyping(true)
-    // Create a temporary message with pending state
+    // Create a temporary user message
     const tempMessageId = crypto.randomUUID()
     const tempMessage: Message = {
       id: tempMessageId,
@@ -203,28 +203,82 @@ export function ChatAppProvider({ children }: { children: React.ReactNode }) {
       isPending: true,
     }
     setMessages((prevMessages) => [...prevMessages, tempMessage])
+
+    // Create a temporary assistant message for streaming
+    const assistantMessageId = crypto.randomUUID()
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      content: '',
+      role: 'assistant',
+      created_at: new Date().toISOString(),
+      chat_id: currentChatId,
+      isPending: true,
+    }
+    setMessages((prevMessages) => [...prevMessages, assistantMessage])
+
     try {
       const response = await fetch(`/api/messages/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, chatId: currentChatId }),
       })
-      if (response.ok) {
-        const data = await response.json()
-        // Replace the temporary message with the real ones
-        setMessages((prevMessages) => {
-          const filtered = prevMessages.filter((msg) => msg.id !== tempMessageId)
-          return [...filtered, data.message, data.assistantMessage]
-        })
-      } else {
-        // Mark the message as error
+
+      if (response.ok && response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let done = false
+        let fullContent = ''
+
+        while (!done) {
+          const { value, done: doneReading } = await reader.read()
+          done = doneReading
+          if (value) {
+            const chunk = decoder.decode(value)
+            fullContent += chunk
+            // Update the assistant message as the stream progresses
+            setMessages((prevMessages) =>
+              prevMessages.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg))
+            )
+          }
+        }
+
+        // Mark the assistant message as not pending
         setMessages((prevMessages) =>
-          prevMessages.map((msg) => (msg.id === tempMessageId ? { ...msg, isPending: false, isError: true } : msg))
+          prevMessages.map((msg) => (msg.id === assistantMessageId ? { ...msg, isPending: false } : msg))
+        )
+        // Save the assistant message to the chat
+
+        const saveResponse = await fetch('/api/messages/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: fullContent,
+            role: 'assistant',
+            chatId: currentChatId,
+          }),
+        })
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save assistant message')
+        }
+
+        // Fetch the real messages from the backend
+        const fetchMessages = async () => {
+          const response = await fetch(`/api/messages?chatId=${currentChatId}`)
+          if (response.ok) {
+            const data = await response.json()
+            setMessages(data)
+          }
+        }
+        fetchMessages()
+      } else {
+        // Mark the assistant message as error
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) => (msg.id === assistantMessageId ? { ...msg, isPending: false, isError: true } : msg))
         )
       }
     } catch {
       setMessages((prevMessages) =>
-        prevMessages.map((msg) => (msg.id === tempMessageId ? { ...msg, isPending: false, isError: true } : msg))
+        prevMessages.map((msg) => (msg.id === assistantMessageId ? { ...msg, isPending: false, isError: true } : msg))
       )
     }
     setLoadingMessages(false)
